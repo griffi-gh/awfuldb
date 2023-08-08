@@ -1,7 +1,10 @@
+use rkyv::Archive;
+
 pub trait ReprSize {
   fn byte_size(&self) -> usize;
 }
 
+#[derive(Archive)]
 pub enum IntegerSize {
   Int8,
   Int16,
@@ -20,6 +23,7 @@ impl ReprSize for IntegerSize {
   }
 }
 
+#[derive(Archive)]
 pub enum FloatSize {
   Float32,
   Float64,
@@ -34,6 +38,7 @@ impl ReprSize for FloatSize {
   }
 }
 
+#[derive(Archive)]
 pub struct IntegerType {
   pub size: IntegerSize,
   pub is_signed: bool,
@@ -45,6 +50,7 @@ impl ReprSize for IntegerType {
   }
 }
 
+#[derive(Archive)]
 pub struct FloatType {
   pub size: FloatSize,
 }
@@ -55,6 +61,7 @@ impl ReprSize for FloatType {
   }
 }
 
+#[derive(Archive)]
 pub enum NumberType {
   Integer(IntegerType),
   Float(FloatType),
@@ -69,6 +76,7 @@ impl ReprSize for NumberType {
   }
 }
 
+#[derive(Archive)]
 pub struct TextType {
   pub size: usize,
 }
@@ -79,6 +87,7 @@ impl ReprSize for TextType {
   }
 }
 
+#[derive(Archive)]
 pub struct BlobType {
   pub size: usize,
 }
@@ -89,6 +98,7 @@ impl ReprSize for BlobType {
   }
 }
 
+#[derive(Archive)]
 pub enum Type {
   Number(NumberType),
   Text(TextType),
