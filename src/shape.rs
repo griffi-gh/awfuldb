@@ -12,15 +12,11 @@ pub struct Column {
 #[derive(Serialize, Deserialize)]
 pub struct Table {
   pub columns: FxHashMap<String, Column>,
+  pub sectors: Vec<u32>,
   pub name: String,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct DbFragmentation {
-
-}
-
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct DatabaseShape {
   pub tables: FxHashMap<String, Table>,
 }
