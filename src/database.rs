@@ -34,7 +34,8 @@ impl<T: RwData> Database<T> {
     self.data.seek(SeekFrom::Start(sector * SECTOR_SIZE as u64))?;
     self.data.write_all(data)?;
 
-    //ensure file length
+    //if writing a non-sector-sized buffer to the last sector...
+    //...seek to the last byte and write something to ensure valid file size
     if data.len() < SECTOR_SIZE {
       let end = self.data.seek(SeekFrom::End(0))?;
       if (end / SECTOR_SIZE as u64) == sector {
