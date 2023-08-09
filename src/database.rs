@@ -1,8 +1,7 @@
-use std::{ops::Range, mem::size_of};
+use std::ops::Range;
 use anyhow::Result;
-use rkyv::{Archive, Deserialize, Serialize};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, AsyncSeekExt};
-use crate::shape::{DatabaseShape, ArchivedDatabaseShape};
+use crate::shape::DatabaseShape;
 
 pub trait RwData: AsyncReadExt + AsyncWriteExt + AsyncSeekExt + Unpin {}
 impl<T: AsyncReadExt + AsyncWriteExt + AsyncSeekExt + Unpin> RwData for T {}
@@ -33,12 +32,14 @@ pub struct Database<T: RwData> {
   shape: DatabaseShape,
 }
 
+//TODO : how to handle shape growth?
+
 impl<T: RwData> Database<T> {
   pub async fn init(data: T) -> Result<Self> {
     let mut data = DatabaseData::new(data);
-    let shape_length = data.read(0..1).await?.len();
-    let shape_bytes = &*data.read(1..(shape_length + 1)).await?;
-    let shape = rkyv::from_bytes(shape_bytes)?;
+    let shape_length = u64::from_le_bytes(data.read(0..8).await?.try_into().unwrap()) as usize;
+    let shape_bytes = &*data.read(8..(shape_length + 8)).await?;
+    let shape = bincode::deserialize(shape_bytes)?;
     Ok(Self { data, shape })
   }
 }

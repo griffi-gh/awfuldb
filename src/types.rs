@@ -1,11 +1,10 @@
-use rkyv::{Archive, Serialize, Deserialize};
+use serde::{Serialize, Deserialize};
 
 pub trait ReprSize {
   fn byte_size(&self) -> usize;
 }
 
-#[derive(Archive, Serialize, Deserialize, Clone, Copy)]
-#[archive(check_bytes)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 #[repr(u8)]
 pub enum IntegerSize {
   Int8 = 1,
@@ -20,8 +19,7 @@ impl ReprSize for IntegerSize {
   }
 }
 
-#[derive(Archive, Serialize, Deserialize, Clone, Copy)]
-#[archive(check_bytes)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 #[repr(u8)]
 pub enum FloatSize {
   Float32 = 4,
@@ -34,8 +32,7 @@ impl ReprSize for FloatSize {
   }
 }
 
-#[derive(Archive, Serialize, Deserialize)]
-#[archive(check_bytes)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct IntegerType {
   pub size: IntegerSize,
   pub is_signed: bool,
@@ -47,8 +44,7 @@ impl ReprSize for IntegerType {
   }
 }
 
-#[derive(Archive, Serialize, Deserialize)]
-#[archive(check_bytes)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct FloatType {
   pub size: FloatSize,
 }
@@ -59,8 +55,7 @@ impl ReprSize for FloatType {
   }
 }
 
-#[derive(Archive, Serialize, Deserialize)]
-#[archive(check_bytes)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub enum NumberType {
   Integer(IntegerType),
   Float(FloatType),
@@ -75,8 +70,7 @@ impl ReprSize for NumberType {
   }
 }
 
-#[derive(Archive, Serialize, Deserialize)]
-#[archive(check_bytes)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct TextType {
   pub size: usize,
 }
@@ -87,8 +81,7 @@ impl ReprSize for TextType {
   }
 }
 
-#[derive(Archive, Serialize, Deserialize)]
-#[archive(check_bytes)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct BlobType {
   pub size: usize,
 }
@@ -99,12 +92,12 @@ impl ReprSize for BlobType {
   }
 }
 
-#[derive(Archive, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub enum Type {
   Number(NumberType),
   Text(TextType),
   Blob(BlobType),
-  //Time(DateTime<Utc>),
+  //TODO Time
 }
 
 impl Type {
@@ -113,15 +106,6 @@ impl Type {
       Type::Number(n) => n.byte_size(),
       Type::Text(t) => t.byte_size(),
       Type::Blob(b) => b.byte_size(),
-      //Type::Time(t) => todo!(),
     }
   }
 }
-
-// impl From<Type> for &'static str {
-//   fn from(typ: Type) -> &'static str {
-//     impl typ {
-      
-//     }
-//   }
-// }
