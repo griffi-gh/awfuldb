@@ -1,8 +1,8 @@
 use std::{ops::Range, mem::size_of};
 use anyhow::Result;
-use rkyv::{Archive, Deserialize};
+use rkyv::{Archive, Deserialize, Serialize};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, AsyncSeekExt};
-use crate::shape::DatabaseShape;
+use crate::shape::{DatabaseShape, ArchivedDatabaseShape};
 
 pub trait RwData: AsyncReadExt + AsyncWriteExt + AsyncSeekExt + Unpin {}
 impl<T: AsyncReadExt + AsyncWriteExt + AsyncSeekExt + Unpin> RwData for T {}
@@ -32,12 +32,13 @@ pub struct Database<T: RwData> {
   data: DatabaseData<T>,
   shape: DatabaseShape,
 }
+
 impl<T: RwData> Database<T> {
   pub async fn init(data: T) -> Result<Self> {
     let mut data = DatabaseData::new(data);
-    let shape_bytes = &*data.read(0..size_of::<ArchivedDatabaseShap>()).await?;
-    let archived_shape = unsafe { rkyv::archived_root::<DatabaseShape>(shape_bytes) };
-    let shape = archived_shape.deserialize(&mut rkyv::Infallible).unwrap();
+    let shape_length = data.read(0..1).await?.len();
+    let shape_bytes = &*data.read(1..(shape_length + 1)).await?;
+    let shape = rkyv::from_bytes(shape_bytes)?;
     Ok(Self { data, shape })
   }
 }

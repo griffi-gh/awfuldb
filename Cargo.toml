@@ -6,9 +6,7 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 arrayvec = "0.7"
-rkyv = { version = "0.7", features = ["archive_le"] } # size_64??
+rkyv = { version = "0.7", features = ["validation", "archive_le"] } # size_64??
 anyhow = "1.0"
-
-[features]
-default = []
-#validation = ["rkyv/validation"]
+rustc-hash = "1.1"
+#chrono = { version = "0.4.26", features = ["rkyv"] }

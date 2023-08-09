@@ -1,20 +1,28 @@
-use crate::types::Type;
 use rkyv::{Archive, Deserialize, Serialize};
+use rustc_hash::FxHashMap;
+use crate::types::Type;
 
-#[derive(Archive)]
+#[derive(Archive, Serialize, Deserialize)]
+#[archive(check_bytes)]
 pub struct Column {
   pub name: String,
   pub typ: Type,
   pub nullable: bool,
 }
 
-#[derive(Archive)]
+#[derive(Archive, Serialize, Deserialize)]
+#[archive(check_bytes)]
 pub struct Table {
-  pub rows: Vec<Column>,
+  pub columns: FxHashMap<String, Column>,
   pub name: String,
 }
 
+pub struct DbFragmentation {
+
+}
+
 #[derive(Archive, Serialize, Deserialize)]
+#[archive(check_bytes)]
 pub struct DatabaseShape {
-  pub tables: Vec<Table>,
+  pub tables: FxHashMap<String, Table>,
 }
