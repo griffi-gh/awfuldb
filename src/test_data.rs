@@ -1,24 +1,32 @@
-use rustc_hash::FxHashMap;
 use crate::{
   database::{Database, RwData},
-  shape::{Table, Column},
-  types::{Type, TextType}
+  operations::{DbOperation, DbColumn, DbRow, DbRowColumnValue},
+  types::Type
 };
 
 pub fn load_test_data<T: RwData>(db: &mut Database<T>)  {
-  db.shape.tables.insert("test".to_string(), Table {
-    columns: {
-      let mut columns = FxHashMap::default();
-      columns.insert("name".to_string(), Column {
-        typ: Type::Text(TextType { size: 11 }),
-        nullable: false,
-      });
-      columns
+  db.perform_multiple(vec![
+    DbOperation::TableCreate {
+      name: "test".into(),
+      columns: vec![
+        DbColumn {
+          name: "test".into(),
+          typ: Type::Text(11),
+          nullable: false,
+        }
+      ]
     },
-    fragmentation: Vec::new(),
-    row_count: 0,
-  });
-  db.write_shape().unwrap();
-  db.table_insert("test", "Hello world".as_bytes()).unwrap();
-  db.table_insert("test", "Goodbye wld".as_bytes()).unwrap();
+    DbOperation::TableInsert {
+      name: "test".into(),
+      columns: DbRow::AsPositional { columns: vec![
+        DbRowColumnValue::String("Hello world".into()),
+      ]}
+    },
+    DbOperation::TableInsert {
+      name: "test".into(),
+      columns: DbRow::AsPositional { columns: vec![
+        DbRowColumnValue::String("Susceptible".into()),
+      ]}
+    },
+  ]).unwrap();
 }

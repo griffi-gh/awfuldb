@@ -3,6 +3,7 @@ use std::fs::File;
 pub(crate) mod types;
 pub(crate) mod shape;
 pub(crate) mod database;
+pub(crate) mod operations;
 pub(crate) mod test_data;
 
 use database::Database;

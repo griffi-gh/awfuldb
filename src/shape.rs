@@ -10,7 +10,8 @@ pub struct Column {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Table {
-  pub columns: FxHashMap<String, Column>,
+  pub columns: Vec<Column>,
+  pub column_map: FxHashMap<String, usize>,
   pub fragmentation: Vec<u64>,
   pub row_count: u64,
 }
@@ -18,7 +19,7 @@ pub struct Table {
 impl ReprSize for Table {
   /// returns byte size of ROW, not entire TABLE
   fn byte_size(&self) -> usize {
-    self.columns.values().map(|c| c.typ.byte_size()).sum()
+    self.columns.iter().map(|c| c.typ.into_type_tree().byte_size()).sum()
   }
 }
 
