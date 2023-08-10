@@ -4,7 +4,7 @@ pub trait ReprSize {
   fn byte_size(&self) -> usize;
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 #[repr(u8)]
 pub enum IntegerSize {
   Int8 = 1,
@@ -19,7 +19,7 @@ impl ReprSize for IntegerSize {
   }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 #[repr(u8)]
 pub enum FloatSize {
   Float32 = 4,
@@ -32,7 +32,7 @@ impl ReprSize for FloatSize {
   }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct IntegerType {
   pub size: IntegerSize,
   pub is_signed: bool,
@@ -44,7 +44,7 @@ impl ReprSize for IntegerType {
   }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct FloatType {
   pub size: FloatSize,
 }
@@ -55,7 +55,7 @@ impl ReprSize for FloatType {
   }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub enum NumberType {
   Integer(IntegerType),
   Float(FloatType),
@@ -70,7 +70,7 @@ impl ReprSize for NumberType {
   }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct TextType {
   pub size: usize,
 }
@@ -81,7 +81,7 @@ impl ReprSize for TextType {
   }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct BlobType {
   pub size: usize,
 }
@@ -92,7 +92,7 @@ impl ReprSize for BlobType {
   }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub enum Type {
   Number(NumberType),
   Text(TextType),

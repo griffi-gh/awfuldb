@@ -35,7 +35,7 @@ impl<T: RwData> Database<T> {
     ensure!((data.len() + offset) <= SECTOR_SIZE);
 
     //write data
-    self.data.seek(SeekFrom::Start(sector * SECTOR_SIZE as u64))?;
+    self.data.seek(SeekFrom::Start(offset as u64 + sector * SECTOR_SIZE as u64))?;
     self.data.write_all(data)?;
 
     //if writing a non-sector-sized buffer a new sector...

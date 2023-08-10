@@ -2,13 +2,13 @@ use serde::{Serialize, Deserialize};
 use rustc_hash::FxHashMap;
 use crate::types::{Type, ReprSize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Column {
   pub typ: Type,
   pub nullable: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Table {
   pub columns: FxHashMap<String, Column>,
   pub fragmentation: Vec<u64>,
@@ -22,7 +22,7 @@ impl ReprSize for Table {
   }
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct DatabaseShape {
   pub tables: FxHashMap<String, Table>,
 }
