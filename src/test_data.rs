@@ -5,6 +5,7 @@ use crate::{
 };
 
 pub fn load_test_data<T: RwData>(db: &mut Database<T>)  {
+  //"test" table
   db.perform_multiple(vec![
     DbOperation::TableCreate {
       name: "test".into(),
@@ -29,4 +30,24 @@ pub fn load_test_data<T: RwData>(db: &mut Database<T>)  {
       ])
     },
   ]).unwrap();
+
+  //"spam" table
+  db.perform(DbOperation::TableCreate {
+    name: "spam".into(),
+    columns: vec![
+      DbColumn {
+        name: "spam_column".into(),
+        typ: Type::Text(11),
+        nullable: false,
+      }
+    ]
+  }).unwrap();
+  for i in 0..10000 {
+    db.perform(DbOperation::TableInsert {
+      name: "spam".into(),
+      columns: DbRow::AsPositional(vec![
+        DbRowColumnValue::String(format!("{: >11}", i)),
+      ])
+    }).unwrap();
+  }
 }

@@ -3,7 +3,7 @@ use anyhow::{Result, ensure};
 use crate::{shape::DatabaseShape, types::ReprSize};
 
 //pub const SECTOR_SIZE: usize = 128 * 1024 * 1024;
-pub const SECTOR_SIZE: usize = 128;
+pub const SECTOR_SIZE: usize = 4096;
 
 pub trait RwData: Read + Write + Seek {}
 impl<T: Read + Write + Seek> RwData for T {}
@@ -46,7 +46,7 @@ impl<T: RwData> Database<T> {
     }
 
     //update sector count
-    self.sector_count = self.sector_count.max(sector);
+    self.sector_count = self.sector_count.max(sector + 1);
     
     Ok(())
   }
@@ -82,21 +82,25 @@ impl<T: RwData> Database<T> {
     let table = self.shape.tables.get_mut(name).unwrap();
     
     let row_size = table.byte_size();
-    let offset = row_size * table.row_count as usize;
-
+    
+    let entries_per_fragment = SECTOR_SIZE / row_size;
+    let falls_into_fragment = table.row_count as usize / entries_per_fragment;
+    
     //ensure data size
     ensure!(row_size == data.len());
     
     //fragment table if needed
-    //TODO: properly fragment on overflow in current fragment
-    if table.fragmentation.is_empty() {
+    if table.fragmentation.len() <= falls_into_fragment {
       table.fragmentation.push(self.sector_count);
     }
-    let sector = table.fragmentation[0];
+    
+    //get sector and offset
+    let sector = table.fragmentation[falls_into_fragment];
+    let offset = row_size * (table.row_count as usize - falls_into_fragment * entries_per_fragment);
     
     //increment row count
     table.row_count += 1;
-
+    
     //write data
     self.write_shape()?;
     self.write_sector(sector, data, offset)?;
