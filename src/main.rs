@@ -32,7 +32,6 @@ fn main() {
       let mut db = Database::new(data).unwrap();
       db.read_database().unwrap();
       println!("database loaded");
-      println!("{:#?}", &db.shape);
     }
   }
 }

@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use serde::{Serialize, Deserialize};
 use rustc_hash::FxHashMap;
 use crate::types::{Type, ReprSize};
@@ -25,5 +26,6 @@ impl ReprSize for Table {
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct DatabaseShape {
+  pub reclaim: VecDeque<u64>,
   pub tables: FxHashMap<String, Table>,
 }
