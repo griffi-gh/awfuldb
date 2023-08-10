@@ -1,10 +1,9 @@
 use serde::{Serialize, Deserialize};
 use rustc_hash::FxHashMap;
-use crate::types::Type;
+use crate::types::{Type, ReprSize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Column {
-  pub name: String,
   pub typ: Type,
   pub nullable: bool,
 }
@@ -12,8 +11,15 @@ pub struct Column {
 #[derive(Serialize, Deserialize)]
 pub struct Table {
   pub columns: FxHashMap<String, Column>,
-  pub sectors: Vec<u32>,
-  pub name: String,
+  pub fragmentation: Vec<u64>,
+  pub row_count: u64,
+}
+
+impl ReprSize for Table {
+  /// returns byte size of ROW, not entire TABLE
+  fn byte_size(&self) -> usize {
+    self.columns.values().map(|c| c.typ.byte_size()).sum()
+  }
 }
 
 #[derive(Serialize, Deserialize, Default)]
