@@ -18,15 +18,15 @@ pub fn load_test_data<T: RwData>(db: &mut Database<T>)  {
     },
     DbOperation::TableInsert {
       name: "test".into(),
-      columns: DbRow::AsPositional { columns: vec![
+      columns: DbRow::AsPositional(vec![
         DbRowColumnValue::String("Hello world".into()),
-      ]}
+      ])
     },
     DbOperation::TableInsert {
       name: "test".into(),
-      columns: DbRow::AsPositional { columns: vec![
+      columns: DbRow::AsPositional(vec![
         DbRowColumnValue::String("Susceptible".into()),
-      ]}
+      ])
     },
   ]).unwrap();
 }

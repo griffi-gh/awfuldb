@@ -44,12 +44,8 @@ impl DbRowColumnValue {
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum DbRow {
-  AsPositional {
-    columns: Vec<DbRowColumnValue>,
-  },
-  AsNamed {
-    columns: FxHashMap<String, DbRowColumnValue>
-  }
+  AsPositional(Vec<DbRowColumnValue>),
+  AsNamed(FxHashMap<String, DbRowColumnValue>),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -106,8 +102,8 @@ impl<T: RwData> Database<T> {
         //Get sorted list of values
         //TODO allow omitting nullable in AsNamed
         let values = match columns {
-          DbRow::AsNamed { columns } => todo!("handle DbRow::AsNamed"),
-          DbRow::AsPositional { columns } => columns,
+          DbRow::AsNamed(columns) => todo!("handle DbRow::AsNamed"),
+          DbRow::AsPositional(columns) => columns,
         };
         ensure!(values.len() == table.columns.len());
         
