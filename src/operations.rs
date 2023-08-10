@@ -34,6 +34,7 @@ impl DbRowColumnValue {
     match typ {
       Type::Text(size) => {
         let Self::String(s) = self else { bail!("expected string") };
+        if s.len() != size { bail!("invalid string size, must match exactly") };
         Ok(s.as_bytes().into())
       },
       _ => todo!("parse other types")
