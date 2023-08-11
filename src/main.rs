@@ -4,6 +4,7 @@ pub(crate) mod types;
 pub(crate) mod shape;
 pub(crate) mod database;
 pub(crate) mod operations;
+pub(crate) mod header;
 pub(crate) mod test_data;
 
 use database::Database;
@@ -15,17 +16,34 @@ fn main() {
     "create" => {
       let data = File::create(&args[1]).unwrap();
       let mut db = Database::new(&data).unwrap();
-      db.write_shape().unwrap();
-      data.sync_all().unwrap();
+      db.sync_database().unwrap();
+      db.truncate().unwrap();
+      db.sync_fs().unwrap();
       println!("created database");
+    }
+    "optimize" => {
+      let data = File::options().read(true).write(true).open(&args[1]).unwrap();
+      let len_before = data.metadata().unwrap().len();
+      let mut db = Database::new(&data).unwrap();
+      db.read_database().unwrap();
+      db.optimize().unwrap();
+      db.truncate().unwrap();
+      db.sync_database().unwrap();
+      db.sync_fs().unwrap();
+      let len_after = data.metadata().unwrap().len();
+      println!("database optimized\nbefore: {len_before}\nafter: {len_after}");
     }
     "test" => {
       let data = File::options().read(true).write(true).open(&args[1]).unwrap();
-      let mut db = Database::new(data).unwrap();
+      let mut db = Database::new(&data).unwrap();
       db.read_database().unwrap();
       println!("database loaded");
       load_test_data(&mut db);
       println!("test data loaded");
+      println!("header: {:?}; shape: {:?}", db.header, db.shape);
+      db.sync_database().unwrap();
+      db.sync_fs().unwrap();
+      println!("db synced");
     }
     _ => {
       let data = File::open(&args[0]).unwrap();

@@ -94,7 +94,6 @@ impl<T: RwData> Database<T> {
           fragmentation: Vec::new(),
           row_count: 0,
         });
-        self.write_shape()?;
         Ok(DbOperationResult::NoResult)
       },
       DbOperation::TableInsert { name, columns } => {

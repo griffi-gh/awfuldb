@@ -25,7 +25,7 @@ impl ReprSize for Table {
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
-pub struct DatabaseShape {
+pub struct DbShape {
   pub reclaim: VecDeque<u64>,
   pub tables: FxHashMap<String, Table>,
 }

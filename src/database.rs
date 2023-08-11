@@ -6,7 +6,7 @@ use std::{
 };
 use anyhow::{Result, ensure};
 use divrem::DivCeil;
-use crate::{shape::DatabaseShape, types::ReprSize};
+use crate::{shape::DbShape, types::ReprSize, header::DbHeader};
 
 //pub const SECTOR_SIZE: usize = 128 * 1024 * 1024;
 pub const SECTOR_SIZE: usize = 1024;
@@ -16,20 +16,20 @@ impl<T: Read + Write + Seek> RwData for T {}
 
 pub struct Database<T: RwData> {
   data: T,
-  pub shape: DatabaseShape,
-  sector_count: u64,
+  pub header: DbHeader,
+  pub shape: DbShape,
+  header_dirty: bool,
   shape_dirty: bool,
-  shape_location: Range<u64>,
 }
 
 impl<T: RwData> Database<T> {
   pub fn new(data: T) -> Result<Self> {
     Ok(Self {
       data,
-      shape: DatabaseShape::default(),
-      sector_count: 1,
-      shape_dirty: false,
-      shape_location: 0..0
+      header: DbHeader::default(),
+      shape: DbShape::default(),
+      header_dirty: true,
+      shape_dirty: true,
     })
   }
 
@@ -41,8 +41,8 @@ impl<T: RwData> Database<T> {
   }
 
   pub fn write_sector(&mut self, sector: u64, data: &[u8], offset: usize) -> Result<()> {
-    ensure!(data.len() <= SECTOR_SIZE);
-    ensure!((data.len() + offset) <= SECTOR_SIZE);
+    ensure!(sector < self.header.sector_count, "Unallocated sector");
+    ensure!((data.len() + offset) <= SECTOR_SIZE, "Data does not fit inside the sector");
 
     //write data
     self.data.seek(SeekFrom::Start(offset as u64 + sector * SECTOR_SIZE as u64))?;
@@ -50,30 +50,48 @@ impl<T: RwData> Database<T> {
 
     //if writing a non-sector-sized buffer a new sector...
     //...seek to the last byte and write something to ensure valid file size
-    if ((data.len() + offset) < SECTOR_SIZE) && (sector >= self.sector_count) {
+    if ((data.len() + offset) < SECTOR_SIZE) && (sector >= self.header.sector_count) {
       self.data.seek(SeekFrom::Start((sector + 1) * SECTOR_SIZE as u64 - 1))?;
       self.data.write_all(&[0])?;
     }
 
     //update sector count
-    self.sector_count = self.sector_count.max(sector + 1);
+    //XXX: we're using allocation api now so no need for this anymore
+    // self.header.sector_count = self.header.sector_count.max(sector + 1);
+    // self.header_dirty = true;
     
     Ok(())
   }
 
+  pub fn read_header(&mut self) -> Result<()> {
+    let buf = self.read_sector(0)?;
+    self.header = bincode::deserialize(&buf)?;
+    self.header_dirty = false;
+    Ok(())
+  }
+
+  pub fn write_header(&mut self) -> Result<()> {
+    let mut buf = vec![0; SECTOR_SIZE].into_boxed_slice();
+    bincode::serialize_into(&mut buf[..], &self.header)?;
+    self.write_sector(0, &buf, 0)?;
+    self.header_dirty = false;
+    Ok(())
+  }
+
   pub fn read_shape(&mut self) -> Result<()> {
-    let shape_start_bytes = self.shape_location.start * SECTOR_SIZE as u64;
-    let shape_size_sectors = self.shape_location.end - self.shape_location.start;
+    let shape_start_bytes = self.header.shape_location.0 * SECTOR_SIZE as u64;
+    let shape_size_sectors = self.header.shape_location.1 - self.header.shape_location.0;
     let shape_size_bytes = shape_size_sectors as usize * SECTOR_SIZE;
     let mut buffer = vec![0; shape_size_bytes];
     self.data.seek(SeekFrom::Start(shape_start_bytes))?;
     self.data.read_exact(&mut buffer)?;
     self.shape = bincode::deserialize(&buffer)?;
+    self.shape_dirty = false;
     Ok(())
   }
   
   pub fn write_shape(&mut self) -> Result<()> {
-    let mut shape_size_sectors = self.shape_location.end - self.shape_location.start;
+    let mut shape_size_sectors = self.header.shape_location.1 - self.header.shape_location.0;
     let mut shape_size_bytes = shape_size_sectors as usize * SECTOR_SIZE;
     
     let mut buffer = bincode::serialize(&self.shape)?;
@@ -81,14 +99,20 @@ impl<T: RwData> Database<T> {
     if buffer.len() > shape_size_bytes {
       //TODO check if already on the edge
       //buffer too large, we need to move the shape!
-      for sec in self.shape_location.clone().rev() {
+      //Mark shape as NOT dirty NOW so we can watch for changes
+      self.shape_dirty = false;
+      for sec in (self.header.shape_location.0..self.header.shape_location.1).rev() {
         self.reclaim_sector(sec);
       }
+      if self.shape_dirty {
+        //Re-serialize because shape changed
+        buffer = bincode::serialize(&self.shape)?;
+      }
       let buffer_size_sectors = DivCeil::div_ceil(buffer.len() as u64, SECTOR_SIZE as u64);
-      self.shape_location = self.allocate_consecutive_sectors(buffer_size_sectors);
-      self.shape_dirty = true;
-      self.write_shape_location()?;
-      shape_size_sectors = self.shape_location.end - self.shape_location.start;
+      let alloc_sec_range = self.allocate_consecutive_sectors(buffer_size_sectors);
+      self.header.shape_location = (alloc_sec_range.start, alloc_sec_range.end);
+      self.header_dirty = true;
+      shape_size_sectors = self.header.shape_location.1 - self.header.shape_location.0;
       shape_size_bytes = shape_size_sectors as usize * SECTOR_SIZE;
       //println!("shape_size_bytes = {shape_size_bytes}\nbuf.len = {}", buffer.len());
     }
@@ -98,7 +122,7 @@ impl<T: RwData> Database<T> {
     
     //write sector data
     //not using write_sector because we're writing to multiple sectors at the same time!
-    let shape_start_bytes = self.shape_location.start * SECTOR_SIZE as u64;
+    let shape_start_bytes = self.header.shape_location.0 * SECTOR_SIZE as u64;
     self.data.seek(SeekFrom::Start(shape_start_bytes))?;
     self.data.write_all(&buffer)?;
 
@@ -109,13 +133,13 @@ impl<T: RwData> Database<T> {
   }
 
   pub fn reclaim_sector(&mut self, sector: u64) {
-    // if sector == self.sector_count - 1 {
-    //   self.sector_count -= 1;
-    //   //TODO reclaim space here
-    //   return;
-    // }
-    self.shape.reclaim.push_back(sector);
-    self.shape_dirty = true;
+    if sector == self.header.sector_count - 1 {
+      self.header.sector_count -= 1;
+      self.header_dirty = true;
+    } else {
+      self.shape.reclaim.push_back(sector);
+      self.shape_dirty = true;
+    }
   }
 
   pub fn allocate_sector(&mut self) -> u64 {
@@ -123,8 +147,9 @@ impl<T: RwData> Database<T> {
       self.shape_dirty = true;
       sector
     } else {
-      self.sector_count += 1;
-      self.sector_count - 1
+      self.header_dirty = true;
+      self.header.sector_count += 1;
+      self.header.sector_count - 1
     }
   }
 
@@ -135,55 +160,64 @@ impl<T: RwData> Database<T> {
     if buf.len() == 1 {
       buf[0] = self.allocate_sector();
     } else {
-      self.shape_dirty = true;
       for entry in buf {
         if let Some(sector) = self.shape.reclaim.pop_front() {
           *entry = sector;
+          self.shape_dirty = true;
           continue
         }
-        *entry = self.sector_count;
-        self.sector_count += 1;
+        *entry = self.header.sector_count;
+        self.header_dirty = true;
+        self.header.sector_count += 1;
       }
     }
   }
 
   pub fn allocate_consecutive_sectors(&mut self, len: u64) -> Range<u64> {
-    //TODO: look through reclaim
-    self.sector_count += len;
-    (self.sector_count - len)..self.sector_count
-  }
-
-  pub fn read_shape_location(&mut self) -> Result<()> {
-    let mut range_start = [0; 8];
-    let mut range_end = [0; 8];
-    self.data.seek(SeekFrom::Start(0))?;
-    self.data.read_exact(&mut range_start[..])?;
-    self.data.read_exact(&mut range_end[..])?;
-    let range_start = u64::from_le_bytes(range_start);
-    let range_end = u64::from_le_bytes(range_end);
-    self.shape_location = range_start..range_end;
-    Ok(())
-  }
-
-  pub fn write_shape_location(&mut self) -> Result<()> {
-    self.data.seek(SeekFrom::Start(0))?;
-    self.data.write_all(&u64::to_le_bytes(self.shape_location.start))?;
-    self.data.write_all(&u64::to_le_bytes(self.shape_location.end))?;
-    Ok(())
-  }
-
-  pub fn read_sector_count(&mut self) -> Result<()> {
-    self.sector_count = (self.data.seek(SeekFrom::End(0))? / SECTOR_SIZE as u64).max(2);
-    Ok(())
+    if len == 0 {
+      0..0
+    } else if len == 1 {
+      let sec = self.allocate_sector();
+      sec..(sec + 1)
+    } else {
+      self.header_dirty = true;
+      self.header.sector_count += len;
+      (self.header.sector_count - len)..self.header.sector_count
+    }
   }
   
+  /// Read shape and header from the drive\
+  /// This is not called automatically!\
+  /// You need to call it explicitly to prevent data loss\
   pub fn read_database(&mut self) -> Result<()> {
-    self.read_sector_count()?;
-    self.read_shape_location()?;
+    //Order of operations is important here!
+    //Reading the shape requires shape location to be known which is located in the header
+    self.read_header()?;
     self.read_shape()?;
-    println!("sector count: {:?}", self.sector_count);
-    println!("shape location: {:?}", self.shape_location);
+    println!("header: {:?}", self.header);
     println!("shape: {:?}", self.shape);
+    Ok(())
+  }
+
+  /// Sync modified header/shape data to the disk\
+  /// This is not called automatically!\
+  /// You need to call it explicitly to prevent data loss\
+  pub fn sync_database(&mut self) -> Result<()> {
+    //Order of operations is important here too!
+    //As writing the shape may cause shape to be relocated (which modifies the header)
+    if self.shape_dirty {
+      self.write_shape()?;
+    }
+    if self.header_dirty {
+      self.write_header()?;
+    }
+    Ok(())
+  }
+
+  /// Defragment and optimize the database\
+  /// Currently a no-op
+  pub fn optimize(&mut self) -> Result<()> {
+    //TODO database optimization
     Ok(())
   }
 
@@ -191,6 +225,8 @@ impl<T: RwData> Database<T> {
   //TODO: ensure that table exists
   //TODO: accept sth like Row instead of raw bytes
 
+  /// Warning: db data is reflected right away, but shape is not
+  /// Remember to call `sync_to_disk` to write that info to the disk
   pub fn table_insert(&mut self, name: &str, data: &[u8]) -> Result<()> {
     let table = self.shape.tables.get_mut(name).unwrap();
     
@@ -218,9 +254,32 @@ impl<T: RwData> Database<T> {
     }
 
     //write data
-    self.write_shape()?;
     self.write_sector(sector.unwrap(), data, offset)?;
 
+    //mark shape as dirty
+    self.shape_dirty = true;
+
+    Ok(())
+  }
+}
+
+impl Database<&File> {
+  /// Commit in-memory data to the filesystem\
+  /// This is not called automatically!\
+  /// This function DOES NOT call `sync_database`
+  pub fn sync_fs(&mut self) -> Result<()> {
+    self.data.sync_all()?;
+    Ok(())
+  }
+
+  /// Truncate the database file size based on the current sector count\
+  /// This is not called automatically!\
+  pub fn truncate(&mut self) -> Result<()> {
+    let sector_len = self.header.sector_count * SECTOR_SIZE as u64;
+    let data_len = self.data.metadata()?.len();
+    if data_len > sector_len {
+      self.data.set_len(sector_len)?;
+    }
     Ok(())
   }
 }
