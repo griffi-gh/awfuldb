@@ -5,10 +5,12 @@ pub(crate) mod shape;
 pub(crate) mod database;
 pub(crate) mod operations;
 pub(crate) mod header;
-pub(crate) mod test_data;
+pub(crate) mod query;
+
+mod _test_data;
 
 use database::Database;
-use test_data::load_test_data;
+use _test_data::load_test_data;
 
 fn main() {
   let args: Vec<String> = std::env::args().skip(1).collect();

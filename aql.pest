@@ -1,0 +1,56 @@
+WHITESPACE = _{ (WHITE_SPACE)+ }
+COMMENT = _{
+  ("/*" ~ (!"*/" ~ ANY)* ~ "*/") |
+  ("//" ~ (!"\n" ~ ANY)* ~ "\n")
+}
+
+numeric = { ASCII_DIGIT+ }
+item = { (ASCII_ALPHANUMERIC | "_")+ }
+
+nil_literal = { "nil" }
+number_literal = { numeric }
+string_literal = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+literal = { number_literal | string_literal | nil_literal }
+
+//TODO: proper expressions
+expr = { literal }
+
+expr_list = { "(" ~ expr? ~ ("," ~ expr?)* ~ ")" }
+
+expr_table_item = { item ~ ":" ~ expr }
+expr_table = { "{" ~ expr_table_item? ~ ("," ~ expr_table_item?)* ~ "}" }
+
+// should use expr in arr_size?
+arr_size = { "[" ~ number_literal ~ "]" }
+type = {
+  "u8" | "i8" |
+  "u16" | "i16" |
+  "u32" | "i32" |
+  "u64" | "i64" |
+  "f32" | "f64" |
+  ("text" ~ arr_size ) |
+  ("blob" ~ arr_size )
+}
+
+// CreateTable test {
+// 	name: text[10],
+// 	age: u16,
+// };
+column_type = { type ~ "?"? }
+column_def = { item ~ ":" ~ column_type }
+column_def_list = { ("{" ~ column_def? ~ ("," ~ column_def?)* ~ "}")* }
+create_table = { "CreateTable" ~ item ~ column_def_list }
+
+// DropTable test;
+drop_table = { "DropTable" ~ item }
+
+// InsertInto test {
+//   name: "Adam",
+//   age: 17,
+// };
+// InsertInto test ("Adam", 17);
+insert_into = { "InsertInto" ~ item ~ (expr_list | expr_table) }
+
+statement = { (create_table | drop_table | insert_into) }
+
+query = { SOI ~ (statement ~ ";")* ~ EOI }
