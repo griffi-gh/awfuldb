@@ -25,8 +25,7 @@ size = { "[" ~ expr ~ "]" }
 type = {
   "u8" | "u16" | "u32" | "u64" |
   "i8" | "i16" | "i32" | "i64" |
-  "f32" | "f64" |
-  "text" | "blob"
+  "f32" | "f64" | "text" | "blob"
 }
 
 // CreateTable test {
@@ -48,10 +47,6 @@ drop_table = { "DropTable" ~ item }
 // InsertInto test ("Adam", 17);
 insert_into = { "InsertInto" ~ item ~ (expr_list | expr_table) }
 
-// If <expr> { ... }
-if_expr = { "If" ~ expr ~ block? }
-
 statement = { (create_table | drop_table | insert_into) ~ ";" }
-block = { "{" ~ statement* ~ "}" }
 
 query = { SOI ~ statement* ~ EOI }
