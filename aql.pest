@@ -11,7 +11,16 @@ nil_literal = { "nil" }
 bool_literal = { "true" | "false" }
 number_literal = { numeric }
 string_literal = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
-literal = { number_literal | bool_literal | string_literal | nil_literal }
+literal = _{ number_literal | bool_literal | string_literal | nil_literal }
+
+//unused:
+cmp_gt = { ">" }
+cmp_gt_eq = { ">=" }
+cmp_lt = { "<" }
+cmp_lt_eq = { "<=" }
+cmp_eq = { "==" }
+cmp_not_eq = { "!=" }
+cmp = _{ cmp_gt | cmp_gt_eq | cmp_lt | cmp_lt_eq | cmp_eq | cmp_not_eq }
 
 //TODO: proper expressions
 expr = { literal }
@@ -35,7 +44,7 @@ type = {
 column_type = { type ~ size? ~ "?"? }
 column_def = { item ~ ":" ~ column_type }
 column_def_list = { ("{" ~ column_def? ~ ("," ~ column_def?)* ~ "}")* }
-create_table = { "CreateTable" ~ item ~ column_def_list }
+create_table = { "CreateTable" ~ item ~ column_def_list? }
 
 // DropTable test;
 drop_table = { "DropTable" ~ item }
