@@ -13,17 +13,29 @@ number_literal = { numeric }
 string_literal = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 literal = _{ number_literal | bool_literal | string_literal | nil_literal }
 
-//unused:
-cmp_gt = { ">" }
-cmp_gt_eq = { ">=" }
-cmp_lt = { "<" }
-cmp_lt_eq = { "<=" }
-cmp_eq = { "==" }
-cmp_not_eq = { "!=" }
-cmp = _{ cmp_gt | cmp_gt_eq | cmp_lt | cmp_lt_eq | cmp_eq | cmp_not_eq }
-
-//TODO: proper expressions
-expr = { literal }
+fn_call = { item ~ "(" ~ expr? ~ ("," ~ expr)* ~ ")" }
+op_gt = { ">" }
+op_gt_eq = { ">=" }
+op_lt = { "<" }
+op_lt_eq = { "<=" }
+op_eq = { "==" }
+op_not_eq = { "!=" }
+op_add = { "+" }
+op_sub = { "-" }
+op_div = { "/" }
+op_mul = { "*" }
+op_exp = { "^" }
+infix = _{
+  op_gt | op_gt_eq | op_lt | op_lt_eq | op_eq | op_not_eq |
+  op_add | op_sub | op_div | op_mul | op_exp
+}
+op_neg = { "-" }
+op_len = { "#" }
+prefix = _{ op_neg | op_len }
+primary = _{ literal | fn_call | item | ("(" ~ expr ~ ")") }
+infix_expr = { primary ~ infix ~ primary }
+prefix_expr = { prefix ~ primary }
+expr = { infix_expr | prefix_expr | primary }
 
 expr_list = { "(" ~ expr? ~ ("," ~ expr?)* ~ ")" }
 
@@ -36,13 +48,14 @@ type = {
   "i8" | "i16" | "i32" | "i64" |
   "f32" | "f64" | "text" | "blob"
 }
+full_type = { type ~ size? ~ "?"? }
 
 // CreateTable test {
 // 	name: text[10],
 // 	age: u16,
 // };
-column_type = { type ~ size? ~ "?"? }
-column_def = { item ~ ":" ~ column_type }
+// CreateTable empty;
+column_def = { item ~ ":" ~ full_type }
 column_def_list = { ("{" ~ column_def? ~ ("," ~ column_def?)* ~ "}")* }
 create_table = { "CreateTable" ~ item ~ column_def_list? }
 
@@ -56,6 +69,14 @@ drop_table = { "DropTable" ~ item }
 // InsertInto test ("Adam", 17);
 insert_into = { "InsertInto" ~ item ~ (expr_list | expr_table) }
 
-statement = { (create_table | drop_table | insert_into) ~ ";" }
+// Var x = y + 5;
+var_set = { "Var" ~ item ~ ":" ~ full_type  ~ "=" ~ expr }
+
+// If x {
+//   ...
+// }
+if_block = { "If" ~ expr ~ "{" ~ statement* ~ "}"}
+
+statement = { (create_table | drop_table | insert_into | if_block | var_set) ~ ";" }
 
 query = { SOI ~ statement* ~ EOI }
