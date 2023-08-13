@@ -7,48 +7,75 @@ COMMENT = _{
 numeric = _{ ASCII_DIGIT+ }
 item = { (ASCII_ALPHANUMERIC | "_")+ }
 
-nil_literal = { "nil" }
-bool_literal = { "true" | "false" }
-number_literal = { numeric }
-string_literal = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+//TODO: hex/binary/octal number_literal
+
+//Literals:
+// nil_literal: nil
+// bool_literal: true, false
+// number_literal: 1, 2, 3, 4, 5
+// string_literal: "hi", "hello world\n"
 literal = _{ number_literal | bool_literal | string_literal | nil_literal }
+  nil_literal = { "nil" }
+  bool_literal = { "true" | "false" }
+  number_literal = { numeric }
+  string_literal = { "\"" ~ (!"\"" ~ (escape_sequence | ANY))* ~ "\"" }
+    escape_sequence = { "\\" ~ ANY }
 
-fn_call = { item ~ "(" ~ expr? ~ ("," ~ expr)* ~ ")" }
-op_gt = { ">" }
-op_gt_eq = { ">=" }
-op_lt = { "<" }
-op_lt_eq = { "<=" }
-op_eq = { "==" }
-op_not_eq = { "!=" }
-op_add = { "+" }
-op_sub = { "-" }
-op_div = { "/" }
-op_mul = { "*" }
-op_exp = { "^" }
+// Infix operations
 infix = _{
-  op_gt | op_gt_eq | op_lt | op_lt_eq | op_eq | op_not_eq |
-  op_add | op_sub | op_div | op_mul | op_exp
-}
-op_neg = { "-" }
-op_len = { "#" }
+    op_gt | op_gt_eq | op_lt | op_lt_eq | op_eq | op_not_eq |
+    op_add | op_sub | op_div | op_mul | op_exp
+  }
+  op_gt = { ">" }
+  op_gt_eq = { ">=" }
+  op_lt = { "<" }
+  op_lt_eq = { "<=" }
+  op_eq = { "==" }
+  op_not_eq = { "!=" }
+  op_add = { "+" }
+  op_sub = { "-" }
+  op_div = { "/" }
+  op_mul = { "*" }
+  op_exp = { "^" }
+
+// Prefix operations
 prefix = _{ op_neg | op_len }
-primary = _{ literal | fn_call | item | ("(" ~ expr ~ ")") }
-infix_expr = { primary ~ infix ~ primary }
-prefix_expr = { prefix ~ primary }
+  op_neg = { "-" }
+  op_len = { "#" }
+
+// Expressions
+// Please note that operator precedence is not supported,
+// ...all operations must be wrapped
+// Example expression: 45 + (54 * 2) - (#reverse("hi")) + (-45)
 expr = { infix_expr | prefix_expr | primary }
+  fn_call = { item ~ expr_list }
+  primary = _{ literal | fn_call | item | ("(" ~ expr ~ ")") }
+  infix_expr = { primary ~ infix ~ primary }
+  prefix_expr = { prefix ~ primary }
 
+// expr_list: (1, 54 * 2, "hi")
+// expr_table: {
+//   id: 1,
+//   orders: 54 * 2,
+//   comment: "hi"
+// }
 expr_list = { "(" ~ expr? ~ ("," ~ expr?)* ~ ")" }
-
 expr_table_item = { item ~ ":" ~ expr }
 expr_table = { "{" ~ expr_table_item? ~ ("," ~ expr_table_item?)* ~ "}" }
 
-size = { "[" ~ expr ~ "]" }
-type = {
-  "u8" | "u16" | "u32" | "u64" |
-  "i8" | "i16" | "i32" | "i64" |
-  "f32" | "f64" | "text" | "blob"
-}
-full_type = { type ~ size? ~ "?"? }
+//Type definition
+// type: text
+// nullable_type: text?
+// full_type: text[12]?
+//nullable_type = { type ~ nullable? }
+full_type = { type ~ size? ~ nullable? }
+  type = {
+    "u8" | "u16" | "u32" | "u64" |
+    "i8" | "i16" | "i32" | "i64" |
+    "f32" | "f64" | "text" | "blob"
+  }
+  size = { "[" ~ expr ~ "]" }
+  nullable = { "?" }
 
 // CreateTable test {
 // 	name: text[10],
@@ -77,6 +104,9 @@ var_set = { "Var" ~ item ~ ":" ~ full_type  ~ "=" ~ expr }
 // }
 if_block = { "If" ~ expr ~ "{" ~ statement* ~ "}"}
 
+// Statements:
+// CreateTable, DropTable, InsertInto, If, Var
 statement = { (create_table | drop_table | insert_into | if_block | var_set) ~ ";" }
 
+// Query is a list of statements
 query = { SOI ~ statement* ~ EOI }
