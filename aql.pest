@@ -85,7 +85,6 @@ create_enum = { "CreateEnum" ~ expr_list }
 // 	age: u16,
 // };
 // CreateTable empty;
-
 create_table = { "CreateTable" ~ item ~ column_def_list? }
   column_def = { item ~ ":" ~ full_type }
   column_def_list = { ("{" ~ column_def? ~ ("," ~ column_def?)* ~ "}")* }
