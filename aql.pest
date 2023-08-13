@@ -60,8 +60,8 @@ expr = { infix_expr | prefix_expr | primary }
 //   comment: "hi"
 // }
 expr_list = { "(" ~ expr? ~ ("," ~ expr?)* ~ ")" }
-expr_table_item = { item ~ ":" ~ expr }
 expr_table = { "{" ~ expr_table_item? ~ ("," ~ expr_table_item?)* ~ "}" }
+  expr_table_item = { item ~ ":" ~ expr }
 
 //Type definition
 // type: text
@@ -77,14 +77,18 @@ full_type = { type ~ size? ~ nullable? }
   size = { "[" ~ expr ~ "]" }
   nullable = { "?" }
 
+// CreateEnum ("user", "vip", "admin");
+create_enum = { "CreateEnum" ~ expr_list }
+
 // CreateTable test {
 // 	name: text[10],
 // 	age: u16,
 // };
 // CreateTable empty;
-column_def = { item ~ ":" ~ full_type }
-column_def_list = { ("{" ~ column_def? ~ ("," ~ column_def?)* ~ "}")* }
+
 create_table = { "CreateTable" ~ item ~ column_def_list? }
+  column_def = { item ~ ":" ~ full_type }
+  column_def_list = { ("{" ~ column_def? ~ ("," ~ column_def?)* ~ "}")* }
 
 // DropTable test;
 drop_table = { "DropTable" ~ item }
@@ -105,8 +109,8 @@ var_set = { "Var" ~ item ~ ":" ~ full_type  ~ "=" ~ expr }
 if_block = { "If" ~ expr ~ "{" ~ statement* ~ "}"}
 
 // Statements:
-// CreateTable, DropTable, InsertInto, If, Var
-statement = { (create_table | drop_table | insert_into | if_block | var_set) ~ ";" }
+// CreateTable, CreateEnum, DropTable, InsertInto, If, Var
+statement = { (create_table | create_enum | drop_table | insert_into | if_block | var_set) ~ ";" }
 
 // Query is a list of statements
 query = { SOI ~ statement* ~ EOI }
