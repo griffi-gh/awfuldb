@@ -228,28 +228,28 @@ impl<T: RwData> Database<T> {
   /// Warning: db data is reflected right away, but shape is not
   /// Remember to call `sync_to_disk` to write that info to the disk
   pub fn table_insert(&mut self, name: &str, data: &[u8]) -> Result<()> {
-    let table = self.shape.tables.get_mut(name).unwrap();
-    
+    let table = self.shape.get_table_mut(name).unwrap();
+
     let row_size = table.byte_size();
-    
+
     let entries_per_fragment = SECTOR_SIZE / row_size;
     let falls_into_fragment = table.row_count as usize / entries_per_fragment;
-    
+
     //ensure data size
     ensure!(row_size == data.len());
-    
+
     //get offset and sector
     let offset = row_size * (table.row_count as usize - falls_into_fragment * entries_per_fragment);
     let mut sector = table.fragmentation.get(falls_into_fragment).copied();
 
     //increment row count
     table.row_count += 1;
-    
+
     //fragment table if needed
     if table.fragmentation.len() <= falls_into_fragment {
       let psector = self.allocate_sector();
       //HACK: re-grab table to avoid borrowing issues
-      self.shape.tables.get_mut(name).unwrap().fragmentation.push(psector);
+      self.shape.get_table_mut(name).unwrap().fragmentation.push(psector);
       sector = Some(psector);
     }
 

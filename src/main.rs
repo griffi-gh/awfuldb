@@ -5,7 +5,6 @@ pub(crate) mod shape;
 pub(crate) mod database;
 pub(crate) mod operations;
 pub(crate) mod header;
-pub(crate) mod query;
 
 mod _test_data;
 

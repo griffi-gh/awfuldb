@@ -5,6 +5,13 @@ pub trait ReprSize {
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct PointerType(pub u32);
+
+impl ReprSize for PointerType {
+  fn byte_size(&self) -> usize { 8 }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 #[repr(u8)]
 pub enum IntegerSize {
   Int8 = 1,
@@ -77,7 +84,7 @@ pub struct TextType {
 
 impl ReprSize for TextType {
   fn byte_size(&self) -> usize {
-    self.size
+    self.size + 4
   }
 }
 
@@ -94,6 +101,7 @@ impl ReprSize for BlobType {
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub enum TypeTree {
+  Pointer(PointerType),
   Number(NumberType),
   Text(TextType),
   Blob(BlobType),
@@ -103,6 +111,7 @@ pub enum TypeTree {
 impl TypeTree {
   pub fn byte_size(&self) -> usize {
     match self {
+      TypeTree::Pointer(p) => p.byte_size(),
       TypeTree::Number(n) => n.byte_size(),
       TypeTree::Text(t) => t.byte_size(),
       TypeTree::Blob(b) => b.byte_size(),
@@ -112,6 +121,7 @@ impl TypeTree {
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Type {
+  Pointer(u32),
   Unsigned8,
   Unsigned16,
   Unsigned32,
@@ -129,6 +139,7 @@ pub enum Type {
 impl Type {
   pub const fn from_type_tree(tree: TypeTree) -> Self {
     match tree {
+      TypeTree::Pointer(p) => Type::Pointer(p.0),
       TypeTree::Number(n) => match n {
         NumberType::Integer(i) => match i.size {
           IntegerSize::Int8 => if i.is_signed { Type::Signed8 } else { Type::Unsigned8 },
@@ -148,6 +159,7 @@ impl Type {
 
   pub const fn into_type_tree(self) -> TypeTree {
     match self {
+      Type::Pointer(p) => TypeTree::Pointer(PointerType(p)),
       Type::Unsigned8 => TypeTree::Number(NumberType::Integer(IntegerType { size: IntegerSize::Int8, is_signed: false })),
       Type::Unsigned16 => TypeTree::Number(NumberType::Integer(IntegerType { size: IntegerSize::Int16, is_signed: false })),
       Type::Unsigned32 => TypeTree::Number(NumberType::Integer(IntegerType { size: IntegerSize::Int32, is_signed: false })),

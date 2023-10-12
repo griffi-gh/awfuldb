@@ -42,7 +42,7 @@ pub fn load_test_data<T: RwData>(db: &mut Database<T>)  {
       }
     ]
   }).unwrap();
-  for i in 0..10000 {
+  for i in 0..1000000 {
     db.perform(DbOperation::TableInsert {
       name: "spam".into(),
       columns: DbRow::AsPositional(vec![
@@ -50,4 +50,16 @@ pub fn load_test_data<T: RwData>(db: &mut Database<T>)  {
       ])
     }).unwrap();
   }
+
+  //"customers" table
+  db.perform(DbOperation::TableCreate {
+    name: "customers".into(),
+    columns: vec![
+      DbColumn {
+        name: "spam_id".into(),
+        typ: Type::Pointer(1),
+        nullable: false,
+      }
+    ]
+  }).unwrap();
 }

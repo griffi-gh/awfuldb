@@ -34,8 +34,14 @@ impl DbRowColumnValue {
     match typ {
       Type::Text(size) => {
         let Self::String(s) = self else { bail!("expected string") };
-        if s.len() != size { bail!("invalid string size, must match exactly") };
-        Ok(s.as_bytes().into())
+        if s.len() > size { bail!("string is too long") };
+        Ok(
+          (s.len() as u32).to_le_bytes().iter()
+            .chain(s.as_bytes().iter())
+            .copied()
+            .chain(std::iter::repeat(0).take(size - s.len()))
+            .collect()
+        )
       },
       _ => todo!("parse other types")
     }
@@ -49,6 +55,7 @@ pub enum DbRow {
   AsNamed(FxHashMap<String, DbRowColumnValue>),
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum DbOperation {
@@ -59,6 +66,10 @@ pub enum DbOperation {
   TableInsert {
     name: String,
     columns: DbRow,
+  },
+  TableQuery {
+    name: String,
+    columns: Vec<(String, String)>,
   }
 }
 
@@ -75,11 +86,12 @@ impl<T: RwData> Database<T> {
     }
     Ok(results)
   }
-  
+
   pub fn perform(&mut self, op: DbOperation) -> Result<DbOperationResult> {
     match op {
       DbOperation::TableCreate { name, columns } => {
-        self.shape.tables.insert(name, Table {
+        self.shape.insert_table(&name, Table {
+          name: name.clone(),
           columns: columns.iter().map(|c| Column {
             typ: c.typ,
             nullable: c.nullable,
@@ -97,7 +109,7 @@ impl<T: RwData> Database<T> {
         Ok(DbOperationResult::NoResult)
       },
       DbOperation::TableInsert { name, columns } => {
-        let table = self.shape.tables.get_mut(&name).context("table not found")?;
+        let table = self.shape.get_table_mut(&name).context("table not found")?;
 
         //Get sorted list of values
         //TODO allow omitting nullable in AsNamed
@@ -106,7 +118,7 @@ impl<T: RwData> Database<T> {
           DbRow::AsPositional(columns) => columns,
         };
         ensure!(values.len() == table.columns.len());
-        
+
         //Create buffer to write
         let mut row_buffer = vec![0; table.byte_size()].into_boxed_slice();
         let mut position = 0;
@@ -123,6 +135,9 @@ impl<T: RwData> Database<T> {
         self.table_insert(&name, &row_buffer)?;
 
         Ok(DbOperationResult::NoResult)
+      },
+      DbOperation::TableQuery { .. } => {
+        todo!("handle DbOperation::TableQuery")
       },
     }
   }
