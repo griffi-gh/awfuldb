@@ -1,0 +1,72 @@
+//TableCreate:
+POST http://localhost:12012
+[
+  {
+    "type": "TableCreate",
+    "name": "test_fad84que",
+    "columns": [
+      {
+        "name": "username",
+        "type": {"Text": 20}
+      },
+      {
+        "name": "password_hash",
+        "type": {"Text": 40}
+      }
+    ],
+    "_rowid": 1
+  }
+]
+
+//Demo with pointer:
+POST http://localhost:12012
+[
+  {
+    "type": "TableCreate",
+    "name": "test_fad84que_ptr_demo",
+    "columns": [
+      {
+        "name": "pointer_to_test_fad84que",
+        "type": {"Pointer": "test_fad84que"}
+      }
+    ],
+    "_rowid": 1
+  }
+]
+
+//TableInsert
+POST http://localhost:12012
+{
+  "type": "TableInsert",
+  "name": "test_fad84que",
+  "columns": [
+    "HelloUser",
+    "$myPwHash:fe53:1241385u832"
+  ]
+}
+
+//TableQuery:
+POST http://localhost:12012
+[
+  {
+    "type": "TableQuery",
+    "name": "test_fad84que",
+    "columns": [
+      "username",
+      "password_hash"
+    ],
+    "_rowid": 1
+  }
+]
+
+POST http://localhost:12012
+[
+  {
+    "type": "TableQuery",
+    "name": "test",
+    "columns": [
+      "test"
+    ],
+    "_rowid": 1
+  }
+]
