@@ -261,9 +261,25 @@ impl<T: RwData> Database<T> {
 
     Ok(())
   }
+
+  pub fn table_read_row_column(&mut self, name: &str, row: usize, column: usize) -> Result<Box<[u8]>> {
+    let table = self.shape.get_table(name).unwrap();
+    let row_size = table.byte_size();
+    let entries_per_fragment = SECTOR_SIZE / row_size;
+    let falls_into_fragment = row / entries_per_fragment;
+    let sector = table.fragmentation[falls_into_fragment];
+    let mut buffer = vec![0; table.columns[column].typ.into_type_tree().byte_size()].into_boxed_slice();
+    let col_offset: usize = table.columns[..column]
+      .iter()
+      .map(|col| col.typ.into_type_tree().byte_size())
+      .sum();
+    self.data.seek(SeekFrom::Start(sector * SECTOR_SIZE as u64 + col_offset as u64))?;
+    self.data.read_exact(&mut buffer[..])?;
+    Ok(buffer)
+  }
 }
 
-impl Database<&File> {
+impl Database<File> {
   /// Commit in-memory data to the filesystem\
   /// This is not called automatically!\
   /// This function DOES NOT call `sync_database`

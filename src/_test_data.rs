@@ -1,6 +1,6 @@
 use crate::{
   database::{Database, RwData},
-  operations::{DbOperation, DbColumn, DbRow, DbRowColumnValue},
+  operations::{DbOperation, DbColumn, DbRow, DbRowColumnValue, DbTypeExt},
   types::Type
 };
 
@@ -12,7 +12,7 @@ pub fn load_test_data<T: RwData>(db: &mut Database<T>)  {
       columns: vec![
         DbColumn {
           name: "test".into(),
-          typ: Type::Text(11),
+          typ: DbTypeExt::Type(Type::Text(11)),
           nullable: false,
         }
       ]
@@ -37,12 +37,12 @@ pub fn load_test_data<T: RwData>(db: &mut Database<T>)  {
     columns: vec![
       DbColumn {
         name: "spam_column".into(),
-        typ: Type::Text(11),
+        typ: DbTypeExt::Type(Type::Text(11)),
         nullable: false,
       }
     ]
   }).unwrap();
-  for i in 0..1000000 {
+  for i in 0..100000 {
     db.perform(DbOperation::TableInsert {
       name: "spam".into(),
       columns: DbRow::AsPositional(vec![
@@ -56,8 +56,13 @@ pub fn load_test_data<T: RwData>(db: &mut Database<T>)  {
     name: "customers".into(),
     columns: vec![
       DbColumn {
+        name: "name".into(),
+        typ: DbTypeExt::Type(Type::Text(30)),
+        nullable: false,
+      },
+      DbColumn {
         name: "spam_id".into(),
-        typ: Type::Pointer(1),
+        typ: DbTypeExt::UnresolvedPointer("spam".into()),
         nullable: false,
       }
     ]
