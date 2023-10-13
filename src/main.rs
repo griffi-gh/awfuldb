@@ -17,9 +17,9 @@ fn handle_req(request: &Request, db: &mut Database<File>) -> Result<Response> {
   let req = serde_json::from_reader(request.data().context("no request body")?)?;
   let res = db.perform_multiple(req)?;
   db.sync_database()?;
-  if let Err(err) = db.sync_fs() {
-    eprint!("failed to sync db to fs: {}", err);
-  }
+  // if let Err(err) = db.sync_fs() {
+  //   eprint!("failed to sync db to fs: {}", err);
+  // }
   Ok(Response::json(&res))
 }
 

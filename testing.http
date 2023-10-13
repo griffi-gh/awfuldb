@@ -36,14 +36,16 @@ POST http://localhost:12012
 
 //TableInsert
 POST http://localhost:12012
-{
-  "type": "TableInsert",
-  "name": "test_fad84que",
-  "columns": [
-    "HelloUser",
-    "$myPwHash:fe53:1241385u832"
-  ]
-}
+[
+  {
+    "type": "TableInsert",
+    "name": "test_fad84que",
+    "columns": [
+      "HelloUser",
+      "$myPwHash:fe53:1241385u832"
+    ]
+  }
+]
 
 //TableQuery:
 POST http://localhost:12012
