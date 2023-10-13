@@ -272,6 +272,8 @@ impl<T: RwData> Database<T> {
 
   pub fn table_read_row_column(&mut self, name: &str, row: u64, column: usize) -> Result<Box<[u8]>> {
     let table = self.shape.get_table(name).unwrap();
+    ensure!(row < table.row_count, "Row out of bounds");
+    ensure!(column < table.columns.len(), "Column out of bounds");
     let row_size = table.byte_size();
     let entries_per_fragment = SECTOR_SIZE / row_size;
     let falls_into_fragment = row / entries_per_fragment as u64;
