@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 use rustc_hash::FxHashMap;
 use anyhow::{Result, Context, ensure, bail};
 use crate::{
-  database::{Database, RwData},
+  database::{Database, RwData, SECTOR_SIZE},
   shape::{Table, Column, DbShape},
   types::{Type, ReprSize, TypeTree, TextType, IntegerType, IntegerSize, FloatType, FloatSize},
 };
@@ -147,6 +147,7 @@ pub enum DbOperation {
   TableQuery {
     name: String,
     columns: Vec<DbQueryKey>,
+    _rowid: u64
   }
 }
 
@@ -171,7 +172,7 @@ impl<T: RwData> Database<T> {
         if self.shape.get_table(&name).is_some() {
           bail!("table already exists");
         }
-        self.shape.insert_table(&name, Table {
+        let table = Table {
           name: name.clone(),
           columns: columns.iter().map(|c| -> Result<Column> {
             Ok(Column {
@@ -188,7 +189,11 @@ impl<T: RwData> Database<T> {
           },
           fragmentation: Vec::new(),
           row_count: 0,
-        });
+        };
+        if table.byte_size() > SECTOR_SIZE {
+          bail!("row size is too big. compile with larger sector size or reduce row size");
+        }
+        self.shape.insert_table(&name, table);
         Ok(DbOperationResult::NoResult)
       },
       DbOperation::TableInsert { name, columns } => {
@@ -219,7 +224,7 @@ impl<T: RwData> Database<T> {
 
         Ok(DbOperationResult::NoResult)
       },
-      DbOperation::TableQuery { name, columns } => {
+      DbOperation::TableQuery { name, columns, _rowid } => {
         let table_idx = *self.shape.table_map.get(&name).context("table not found")?;
         let mut res = Vec::with_capacity(1);
         for key in columns.iter() {
@@ -233,7 +238,7 @@ impl<T: RwData> Database<T> {
               let column_type = column.typ;
               match column_type.into_type_tree() {
                 TypeTree::Text(_) => {
-                  let roco_data = self.table_read_row_column(&name, 0, col_idx)?;
+                  let roco_data = self.table_read_row_column(&name, _rowid, col_idx)?;
                   let value = DbRowColumnValue::deserialize_as_type(column_type, &roco_data)?;
                   res.push(value);
                 }

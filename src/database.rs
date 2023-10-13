@@ -262,18 +262,19 @@ impl<T: RwData> Database<T> {
     Ok(())
   }
 
-  pub fn table_read_row_column(&mut self, name: &str, row: usize, column: usize) -> Result<Box<[u8]>> {
+  pub fn table_read_row_column(&mut self, name: &str, row: u64, column: usize) -> Result<Box<[u8]>> {
     let table = self.shape.get_table(name).unwrap();
     let row_size = table.byte_size();
     let entries_per_fragment = SECTOR_SIZE / row_size;
-    let falls_into_fragment = row / entries_per_fragment;
-    let sector = table.fragmentation[falls_into_fragment];
+    let falls_into_fragment = row / entries_per_fragment as u64;
+    let sector = table.fragmentation[falls_into_fragment as usize];
     let mut buffer = vec![0; table.columns[column].typ.into_type_tree().byte_size()].into_boxed_slice();
+    let row_offset = row_size * (row as usize - falls_into_fragment as usize * entries_per_fragment);
     let col_offset: usize = table.columns[..column]
       .iter()
       .map(|col| col.typ.into_type_tree().byte_size())
       .sum();
-    self.data.seek(SeekFrom::Start(sector * SECTOR_SIZE as u64 + col_offset as u64))?;
+    self.data.seek(SeekFrom::Start(sector * SECTOR_SIZE as u64 + col_offset as u64 + row_offset as u64))?;
     self.data.read_exact(&mut buffer[..])?;
     Ok(buffer)
   }

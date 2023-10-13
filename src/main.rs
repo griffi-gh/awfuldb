@@ -68,7 +68,9 @@ fn main() {
       db.lock().unwrap().read_database().unwrap();
       println!("database loaded, starting the servier");
       rouille::start_server("127.0.0.1:12012", move |request| {
-        handle_error(handle_req(request, &mut db.lock().unwrap()))
+        handle_error(handle_req(request, &mut db.lock().unwrap_or_else(|poison| {
+          poison.into_inner()
+        })))
       });
     }
   }
