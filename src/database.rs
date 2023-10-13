@@ -33,6 +33,14 @@ impl<T: RwData> Database<T> {
     })
   }
 
+  pub(crate) fn mark_shape_dirty(&mut self) {
+    self.shape_dirty = true;
+  }
+
+  pub(crate) fn mark_header_dirty(&mut self) {
+    self.header_dirty = true;
+  }
+
   pub fn read_sector(&mut self, sector: u64) -> Result<Box<[u8]>> {
     let mut buffer = vec![0; SECTOR_SIZE].into_boxed_slice();
     self.data.seek(SeekFrom::Start(sector * SECTOR_SIZE as u64))?;

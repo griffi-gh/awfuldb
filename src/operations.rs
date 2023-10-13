@@ -194,6 +194,7 @@ impl<T: RwData> Database<T> {
           bail!("row size is too big. compile with larger sector size or reduce row size");
         }
         self.shape.insert_table(&name, table);
+        self.mark_shape_dirty();
         Ok(DbOperationResult::NoResult)
       },
       DbOperation::TableInsert { name, columns } => {
@@ -221,6 +222,8 @@ impl<T: RwData> Database<T> {
         }
 
         self.table_insert(&name, &row_buffer)?;
+
+        self.mark_shape_dirty();
 
         Ok(DbOperationResult::NoResult)
       },

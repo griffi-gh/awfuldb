@@ -65,7 +65,7 @@ fn main() {
       println!("db synced");
     }
     _ => {
-      let data = File::open(&args[0]).unwrap();
+      let data = File::options().read(true).write(true).open(&args[0]).unwrap();
       let db = Arc::new(Mutex::new(Database::new(data).unwrap()));
       db.lock().unwrap().read_database().unwrap();
       println!("database loaded, starting the servier");

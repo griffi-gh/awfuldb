@@ -57,7 +57,7 @@ POST http://localhost:12012
       "username",
       "password_hash"
     ],
-    "_rowid": 1
+    "_rowid": 0
   }
 ]
 
