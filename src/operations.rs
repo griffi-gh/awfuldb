@@ -148,6 +148,9 @@ pub enum DbOperation {
     name: String,
     columns: Vec<DbQueryKey>,
     _rowid: u64
+  },
+  TableDelete {
+    name: String
   }
 }
 
@@ -253,6 +256,16 @@ impl<T: RwData> Database<T> {
         }
         Ok(DbOperationResult::TableQuery(vec![res]))
       },
+      DbOperation::TableDelete { name } => {
+        //TODO move into function
+        let table = self.shape.tables.remove(*self.shape.table_map.get(&name).context("table not found")?);
+        self.shape.table_map.remove(&name);
+        for sector in table.fragmentation {
+          self.reclaim_sector(sector);
+        }
+        self.mark_shape_dirty();
+        Ok(DbOperationResult::NoResult)
+      }
     }
   }
 }

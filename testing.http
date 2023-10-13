@@ -1,3 +1,37 @@
+//TableCreate and insert right after:
+POST http://localhost:12012
+[
+  {
+    "type": "TableCreate",
+    "name": "faculty",
+    "columns": [
+      {
+        "name": "field",
+        "type": {"Text": 5}
+      }
+    ],
+    "_rowid": 1
+  },
+  {
+    "type": "TableInsert",
+    "name": "faculty",
+    "columns": ["value"]
+  },
+  {
+    "type": "TableQuery",
+    "name": "faculty",
+    "columns": ["field"],
+    "_rowid": 0
+  },
+  {
+    "type": "TableDelete",
+    "name": "faculty"
+  }
+]
+
+POST http://localhost:12012
+[{"type": "TableDelete", "name": "faculty"}]
+
 //TableCreate:
 POST http://localhost:12012
 [
