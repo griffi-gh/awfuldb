@@ -1,5 +1,5 @@
 use anyhow::{Result, Context};
-use std::{fs::File, sync::{Arc, Mutex}};
+use std::{fs::File, sync::{Arc, Mutex}, io::{SeekFrom, Seek}};
 use rouille::{Request, Response};
 
 pub(crate) mod types;
@@ -65,10 +65,19 @@ fn main() {
       println!("db synced");
     }
     _ => {
-      let data = File::options().read(true).write(true).open(&args[0]).unwrap();
+      let mut data = File::options().read(true).write(true).create(true).open(&args[0]).unwrap();
+      //Check if the file is empty and needs init
+      let size = data.seek(SeekFrom::End(0)).unwrap();
       let db = Arc::new(Mutex::new(Database::new(data).unwrap()));
-      db.lock().unwrap().read_database().unwrap();
-      println!("database loaded, starting the servier");
+      let mut dblock = db.lock().unwrap();
+      if size == 0 {
+        println!("file empty, creating new database");
+        dblock.sync_database().unwrap();
+        dblock.sync_fs().unwrap();
+      }
+      dblock.read_database().unwrap();
+      drop(dblock);
+      println!("database loaded, starting the server");
       rouille::start_server("127.0.0.1:12012", move |request| {
         handle_error(handle_req(request, &mut db.lock().unwrap_or_else(|poison| {
           poison.into_inner()
