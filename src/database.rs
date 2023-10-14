@@ -202,8 +202,10 @@ impl<T: RwData> Database<T> {
     //Reading the shape requires shape location to be known which is located in the header
     self.read_header()?;
     self.read_shape()?;
-    println!("header: {:?}", self.header);
-    println!("shape: {:?}", self.shape);
+    #[cfg(debug_assertions)] {
+      println!("header: {:?}", self.header);
+      println!("shape: {:?}", self.shape);
+    }
     Ok(())
   }
 
