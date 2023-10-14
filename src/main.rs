@@ -10,9 +10,6 @@ pub(crate) mod header;
 
 use database::Database;
 
-mod _test_data;
-use _test_data::load_test_data;
-
 fn handle_req(request: &Request, db: &mut Database<File>) -> Result<Response> {
   let req = serde_json::from_reader(request.data().context("no request body")?)?;
   let res = db.perform_multiple(req)?;
@@ -52,18 +49,18 @@ fn main() {
     //   let len_after = data.metadata().unwrap().len();
     //   println!("database optimized\nbefore: {len_before}\nafter: {len_after}");
     // }
-    "test" => {
-      let data = File::options().read(true).write(true).open(&args[1]).unwrap();
-      let mut db = Database::new(data).unwrap();
-      db.read_database().unwrap();
-      println!("database loaded");
-      load_test_data(&mut db);
-      println!("test data loaded");
-      println!("header: {:?}; shape: {:?}", db.header, db.shape);
-      db.sync_database().unwrap();
-      db.sync_fs().unwrap();
-      println!("db synced");
-    }
+    // "test" => {
+    //   let data = File::options().read(true).write(true).open(&args[1]).unwrap();
+    //   let mut db = Database::new(data).unwrap();
+    //   db.read_database().unwrap();
+    //   println!("database loaded");
+    //   load_test_data(&mut db);
+    //   println!("test data loaded");
+    //   println!("header: {:?}; shape: {:?}", db.header, db.shape);
+    //   db.sync_database().unwrap();
+    //   db.sync_fs().unwrap();
+    //   println!("db synced");
+    // }
     _ => {
       let mut data = File::options().read(true).write(true).create(true).open(&args[0]).unwrap();
       //Check if the file is empty and needs init
