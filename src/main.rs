@@ -18,7 +18,7 @@ pub(crate) mod header;
 use database::Database;
 
 #[derive(Parser)]
-#[command(author, version)]
+#[command(author, version, arg_required_else_help = true)]
 struct Cli {
   #[command(subcommand)]
   command: Option<Commands>,
@@ -82,8 +82,6 @@ fn txt_opening(path: &PathBuf) {
 }
 
 fn main() {
-  let cli = Cli::parse();
-
   println!(
     "{}",
     r#"
@@ -97,6 +95,7 @@ fn main() {
   );
   println!();
 
+  let cli = Cli::parse();
   match &cli.command {
     Some(Commands::Create(args)) => {
       txt_opening(&args.path);
